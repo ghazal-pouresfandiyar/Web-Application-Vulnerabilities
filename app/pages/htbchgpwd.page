@@ -10,11 +10,11 @@
 	if(isset($http['submit'])) {
 		// get the account information of the user currently logged in
 		$sql="SELECT ".$htbconf['db/users.password']." FROM ".$htbconf['db/users']." where ". $htbconf['db/users.id']."='".$_SESSION['userid']."' and ". $htbconf['db/users.password']."='".$http['oldpwd']."'";
-		$result = mysql_query($sql, $db_link);
+		$result = mysqli_query($db_link, $sql);
 			
 		// check if there was a result
 		if($result) {
-			$matches = mysql_num_rows($result);
+			$matches = mysqli_num_rows($result);
 			// there was a match => the old password is correct
 			if($matches) {
 				// and the two new passwords are not unequal inform the user with an error message
@@ -24,7 +24,7 @@
 				} else {
 					$sql="update ".$htbconf['db/users']." set ".$htbconf['db/users.password']."='".$http['newpwd1']."' where ". $htbconf['db/users.id']."='".$_SESSION['userid']."'";
 					// otherwise change the password
-					$result = mysql_query($sql, $db_link);
+$result = mysqli_query($db_link, $sql);
 					// we were successful changing the password
 					if($result) {
 						$_SESSION['success'] = "<p>Your password has successfully been changed</p>";
