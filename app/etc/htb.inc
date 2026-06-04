@@ -81,7 +81,7 @@ function htb_reload_page() {
 	htb_redirect($_SERVER['REQUEST_URI']);
 }
 // ______________________________________________
-function errorHandler($errno, $errstr, $errfile, $errline, $errcontext) {
+function errorHandler($errno, $errstr, $errfile, $errline, $errcontext = null) {
 	switch ($errno) {
 		case E_USER_WARNING:
 		case E_USER_NOTICE:
@@ -103,6 +103,7 @@ function errorHandler($errno, $errstr, $errfile, $errline, $errcontext) {
 				$query = NULL;
 			}
 			$errorstring = "<p>Fatal Error: $errstr ($errno).</p>\n";
+			if (!isset($_SESSION['error'])) $_SESSION['error'] = "";
 			$_SESSION['error'].= $errorstring;
 		break;
 		default:
