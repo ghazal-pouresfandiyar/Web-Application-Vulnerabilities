@@ -66,20 +66,23 @@ This document summarizes what we've done, the challenges encountered, and what s
 ### Why I'm NOT satisfied:
 1. We used the Console method which is not ideal for screenshots/documentation
 2. The cleaner method is **disabling JavaScript** in browser settings (`about:config` → `javascript.enabled = false`)
-3. With JS disabled, we can type SQL payloads directly in the form fields and click Login
+3. With JS disabled, we can type special characters directly in the form fields and click Login
 4. We need proper screenshots showing:
    - The JS validation in `htb.js`
-   - The form with special characters in the fields
+   - The form with special characters (###) in the fields
    - The successful bypass result
 
 ### What Seth should do:
 1. **Disable JavaScript** in Firefox: `about:config` → `javascript.enabled` → set to `false`
 2. Refresh the login page
 3. Enter in the form:
-   - Username: `' or 'a'='a`
-   - Password: `x`
-4. Click Login - should bypass and log in as alex
-5. Take screenshots of each step
+   - Username: `###`
+   - Password: `###`
+4. Click Login - should bypass JS validation and reach the server
+5. Take screenshots of each step:
+   - Screenshot 1: The `checkform()` function in `htb.js` showing the regex validation
+   - Screenshot 2: The login form with `###` in both fields (showing special characters accepted)
+   - Screenshot 3: The result page (error or successful bypass proving client-side check was skipped)
 
 ---
 
@@ -87,43 +90,36 @@ This document summarizes what we've done, the challenges encountered, and what s
 
 ### What needs to be done:
 
-**Step 1: Fix PHP 8 compatibility in `htbchgpwd.page`**
-- The password change page uses deprecated `mysql_query()` function
-- This will throw a fatal error on PHP 8.1
-- Need to change `mysql_query()` to `mysqli_query()` and pass `$db_link` as second parameter
-- The file is at: `app/pages/htbchgpwd.page`
-
-**Step 2: Login bypass (creative approach)**
-- Disable JavaScript in browser
+**Step 1: Login bypass with SQL injection**
+- Disable JavaScript in browser (`about:config` → `javascript.enabled = false`)
 - Login with:
   - Username: `' or 'a'='a`
   - Password: `x`
 - This makes the query: `SELECT * FROM users where username='' or 'a'='a' and password='x'`
 - Logs in as first user (alex)
-- **Screenshot:** Welcome page
+- **Screenshot:** Welcome page showing "Alex Lexo"
 
-**Step 3: Change your own password**
+**Step 2: Change your own password**
 - Go to password change page
 - Old password: `' or 'a'='a`
 - New password: `hacked`
 - Retype: `hacked`
-- **Screenshot:** Success message
+- **Screenshot:** Success message "Your password has successfully been changed"
 
-**Step 4: Change another user's password (bob)**
+**Step 3: Change another user's password (bob)**
 - Log out
 - Disable JS again
 - Login as bob:
   - Username: `' or username='bob'#`
   - Password: `x`
-- This makes the query: `SELECT * FROM users where username='' or username='bob'##' and password='x'`
-- Go to password change and change bob's password
+- This makes the query: `SELECT * FROM users where username='' or username='bob'#'' and password='x'`
+- The `#` comments out the rest of the query
 - **Screenshot:** Welcome page showing "Bob Obby"
+- Go to password change and change bob's password using same method
 
-### Code to fix in `htbchgpwd.page`:
-
-Line 13: Change `mysql_query($sql, $db_link)` to `mysqli_query($db_link, $sql)`
-Line 17: Change `mysql_num_rows($result)` to `mysqli_num_rows($result)`
-Line 27: Change `mysql_query($sql, $db_link)` to `mysqli_query($db_link, $sql)`
+### Note:
+- The `htbchgpwd.page` file has been fixed for PHP 8 compatibility (mysql_query → mysqli_query)
+- If you get any errors, let Ghazal know
 
 ---
 
@@ -187,9 +183,7 @@ docker-compose up --build -d
 - `app/login.php` (include paths)
 - `app/etc/config.php` (DB credentials, path prefix)
 - `app/etc/htb.inc` (each(), eregi(), mysql_* fixes, errorHandler default param)
-
-### Still needs fixing:
-- `app/pages/htbchgpwd.page` - change `mysql_query()` to `mysqli_query()` for PHP 8
+- `app/pages/htbchgpwd.page` (mysql_query → mysqli_query for PHP 8)
 
 ---
 
