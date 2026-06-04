@@ -57,7 +57,7 @@ htb_load_page('htbhead');
 if (isset($http['page']) && $http['page'] == "htblogout") {
 	session_set_cookie_params(0);
 	session_destroy();
-	$http['page'] = login;
+	$http['page'] = 'login';
 	htb_redirect(htb_getbaseurl());
 }
 // if the page is not set or specified but the session indicates that you are logged in, then show main page
